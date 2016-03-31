@@ -1,5 +1,214 @@
 <html>
-<body>
-Hello
-</body>
+  <head>
+    <link rel="stylesheet" type="text/css" href="index.css">
+  </head>
+
+  <body>
+  <div class="content">
+    <h3 id="CREATE_TABLE">CREATE TABLE</h3>
+    <pre>
+CREATE TABLE TblMaterialLocation (
+VendorID        char(4),
+MaterialID      char(3),
+LocationID      char(3),
+QuantityOnHand  decimal(8,3),
+
+<span class="comment">/* Money field that must be greater than or equal to 0 */</span>
+CostPerUnit     money CHECK (CostPerUnit >= 0),
+
+<span class="comment">/* DataTime that cannot be NULL */</span>
+FirstBuyDate    datetime NOT NULL,
+
+<span class="comment">/* Creates a concatenated primary key on the VendorID, MaterialID, LocationID columns */</span>
+CONSTRAINT pkVendor
+  PRIMARY KEY (VendorID, MaterialID, LocationID),
+
+<span class="comment">/* Creates a concatenated foreign key on the VendorID, MaterialID columns referencing */</span>
+<span class="comment">/* the VendorID, MaterialID columns in TblVendorMaterial */</span>
+CONSTRAINT fkVendorMaterial
+  FOREIGN KEY (VendorID, MaterialID)
+  REFERENCES TblVendorMaterial (VendorID, MaterialID)
+);
+    </pre>
+
+    <h3 id="INSERT_INTO">INSERT INTO</h3>
+    <pre>
+<span class="comment">/* Fields must be in the same order as defined by CREATE TABLE with this syntax */</span>
+INSERT INTO TblMaterialLocation VALUES
+('1111', '222', '333', 50.0, 100.00, GET_DATE());
+
+<span class="comment">/* Will fail because we said the date could not be NULL */</span>
+INSERT INTO TblMaterialLocation VALUES
+('1111', '222', '333', 50.0, 100.00, NULL);
+
+<span class="comment">/* A different way to specify a date */</span>
+INSERT INTO TblMaterialLocation VALUES
+('1111', '222', '333', 50.0, 100.00, '01-16-16');
+
+<span class="comment">/* Note: Be aware of foreign and primary key constraints that would prevent */</span>
+<span class="comment">/* you from inserting a new row */</span>
+    </pre>
+
+    <h3 id="SELECT">SELECT</h3>
+    <pre>
+SELECT
+  <span class="comment">/* Combines multiple fields into one */</span>
+  <span class="comment">/* SUBSTRING(field, startIndex, length) */</span>
+  <span class="comment">/* UPPER(toUpperCase) */</span>
+  <span class="comment">/* LOWER(toLowerCase) */</span>
+  <span class="comment">/* CHARINDEX(string, field) : returns 0 if not found or index of string in field */</span>
+  UPPER(lastName) + ', ' + UPPER(SUBSTRING(firstName, 1, 1)) 'Name',
+
+  <span class="comment">/* ISNULL(field, valueIfFieldIsNull) */</span>
+  ISNULL(height, '5.5'),
+
+  <span class="comment">/* Fields can be cast as other datatypes */</span>
+  CAST(salary AS MONEY),
+
+  <span class="comment">/* DateTimes can be converted to other display formats */</span>
+  <span class="comment">/* 101 = mm/dd/yyyy */</span>
+  <span class="comment">/* 107 = Month dd, yyyy */</span>
+  CONVERT(varchar, birthday, 107) Birthday
+
+  <span class="comment">/* Case statements can be used to create a column based on your rules */</span>
+  CASE
+    WHEN UPPER(HairColor) = 'BLACK'
+    THEN 'DARK HAIR'
+    ELSE 'LIGHT-COLORED HAIR'
+  END HairColor
+
+<span class="comment">/* Specify the table to select from */</span>
+FROM TblPerson
+
+<span class="comment">/* Select only those people that were born in January or February AND in 1990 */</span>
+WHERE ( MONTH(birthday) = 1 OR MONTH(birthday) = 2 ) AND
+        YEAR(birthday) = 1990
+
+<span class="comment">/* Order the results by birthday. Default is ascending. */</span>
+ORDER BY birthday DESC;
+
+<span class="comment">/* DATEDIFF(day, field, field) : Find the difference between dates for the specified unit */</span>
+<span class="comment">/* DATEADD(month, amount, field) : Add a specified amount of units (day, month, year, etc.) to a date */</span>
+<span class="comment">/* SELECT DISTINCT ... can be used to select unique values in a column */</span>
+    </pre>
+
+    <h3 id="GROUP_FUNC">Group Functions</h3>
+    <pre>
+<span class="comment">/* AVG, MIN, MAX, COUNT, SUM */</span>
+SELECT
+
+  <span class="comment">/* Since results are being grouped by Title, it can be included here */</span>
+  Title,
+
+  <span class="comment">/* Various, random usage of group functions */</span>
+  AVG(Salary)
+  AVG(DaysWorked),
+  SUM(DaysWorked),
+  MIN(Salary),
+  MAX(Salary)
+
+FROM TblEmployees
+
+<span class="comment">/* Only employees that have worked longer than 30 days will be considered */</span>
+WHERE DaysWorked > 30
+
+<span class="comment">/* Runs group functions on groups with different titles. Default is the full table. */</span>
+GROUP BY Title
+
+<span class="comment">/* Only returns results where the minimum salary of the group is greater than 5000 */</span>
+HAVING MIN(Salary) > 5000;
+    </pre>
+
+    <h3 id="SUB_QUERIES">Sub-Queries</h3>
+    <pre>
+<span class="comment">/* Selects employees that do not have their department in the department table */</span>
+<span class="comment">/* Uncorrelated query: Outer query does not share data with inner query */</span>
+SELECT *
+FROM TblEmployee
+WHERE department NOT IN (
+  SELECT dept
+  FROM TblDepartment
+);
+
+<span class="comment">/* Selects employees with a salary higher than their department average */</span>
+<span class="comment">/* Correlated query: Outer query *does* share data with inner query */</span>
+SELECT
+  EmpID,
+  Name,
+  Salary
+FROM TblEmployee outsidequery
+WHERE salary > (
+  SELECT AVG(salary)
+  FROM TblEmployee insidequery
+  WHERE insidequery.department = outsidequery.department
+);
+    </pre>
+
+    <h3 id="JOINS">Joins</h3>
+    <pre>
+<span class="comment">/* Selects fields from multiple tables that you join on */</span>
+SELECT
+  emp.Name,
+  emp.Title,
+  dept.Name
+FROM TblEmployee emp
+
+<span class="comment">/* INNER JOIN: Join only on non-NULL data */</span>
+<span class="comment">/* LEFT OUTER JOIN: For every row in the left table, join with the right */</span>
+<span class="comment">/*                  (including those that would result in NULL on the right) */</span>
+<span class="comment">/*                  Left = table used in the query first. Right = table used second */</span>
+<span class="comment">/* RIGHT OUTER JOIN: Similar to LEFT OUTER JOIN, but done for every row in the right table */</span>
+<span class="comment">/* FULL OUTER JOIN: Every row in both tables regardless of NULL */</span>
+<span class="comment">/* In this example, TblEmployee is the left table and TblDepartment is the right table */</span>
+INNER JOIN TblDepartment dept
+
+<span class="comment">/* The "ON" specifies what fields to join on and with what condition */</span>
+ON emp.Department = dept.DepartmentID;
+
+<span class="comment">/* Referential Integrity: Every value of a column of a table exists */</span>
+<span class="comment">/* as a value of another column in a different (or same) table. One effect */</span>
+<span class="comment">/* this has is that an OUTER JOIN will return the same rows as an INNER JOIN */</span>
+<span class="comment">/* there will be NULL values to "ignore" in the OUTER JOIN case. */</span>
+
+<span class="comment">/* Tips for complex joins: */</span>
+<span class="comment">/* - Count rows for every table before starting */</span>
+<span class="comment">/* - Start simple and with a basic relationship */</span>
+<span class="comment">/* - Run your partial joins instead of running a giant query once at the end */</span>
+<span class="comment">/* - Start with an OUTER JOIN if you don't know if referential integrity exists */</span>
+<span class="comment">/* - ? */</span>
+    </pre>
+
+    <h3 id="VIEWS">Views</h3>
+    <pre>
+CREATE VIEW vMyRandomView AS
+SELECT
+  emp.Name,
+  emp.Title,
+  dept.Name
+FROM TblEmployee emp
+INNER JOIN TblDepartment dept
+ON emp.Department = dept.DepartmentID;
+
+<span class="comment">/* Now you can use the view as a normal table */</span>
+SELECT *
+FROM vMyRandomView;
+
+<span class="comment">/* Why use views? */</span>
+<span class="comment">/* - Complex queries can be broken down */</span>
+<span class="comment">/* - Complex queries involving group functions are cleaner to code */</span>
+<span class="comment">/* - Security (only gives access to the fields you specify) */</span>
+<span class="comment">/* - ? */</span>
+    </pre>
+  </div><div class="menu">
+    <a href="#CREATE_TABLE"><div>Create Table</div></a>
+    <a href="#INSERT_INTO"><div>Insert</div></a>
+    <a href="#SELECT"><div>Select</div></a>
+    <a href="#GROUP_FUNC"><div>Group Functions</div></a>
+    <a href="#SUB_QUERIES"><div>Sub-Queries</div></a>
+    <a href="#JOINS"><div>Joins</div></a>
+    <a href="#VIEWS"><div>Views</div></a>
+    <a href="ERD.png"><div>ERD</div></a>
+  </div>
+
+  </body>
 </html>
